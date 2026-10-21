@@ -229,3 +229,4 @@ node backend/test-e2e.js
 - Zero dummy buttons: every toggle, dropdown, card, and modal is connected to live MongoDB and Express endpoints.
 - Base64 and remote URL image support ensures image upload works without external AWS S3 dependencies.
 - Built with high responsiveness across desktop, tablet, and mobile screens.
+"# CampusCare" 
