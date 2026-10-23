@@ -178,12 +178,38 @@ npm run dev
 ```
 > The server will start on `http://localhost:5000`. If local MongoDB is running, it connects immediately. If not, it boots an in-memory database with pre-loaded demo tickets!
 
-### 4. Run the Frontend Application
+### 4. Run Locally (Full Stack in 1 Command)
 ```bash
-cd frontend
 npm run dev
 ```
-> The application will open at `http://localhost:5173`.
+> Starts both backend (http://localhost:5000) and frontend (http://localhost:5173) concurrently.
+
+---
+
+## ⚡ Deploying on Vercel
+
+CampusCare is fully optimized for **Vercel** with two flexible deployment paths:
+
+### Option A: 1-Click Unified Monorepo (Frontend + Serverless API)
+1. Push your repository to GitHub.
+2. Go to [vercel.com](https://vercel.com) and click **"Add New Project"** ➔ **Import Git Repository**.
+3. Keep **Root Directory** as `./` (default).
+4. Vercel automatically detects the root `vercel.json`:
+   - Builds frontend with `npm --prefix frontend run build` to `frontend/dist`.
+   - Deploys Express API as Serverless Functions via `api/index.js` handling `/api/*`.
+5. Under **Environment Variables**, add:
+   - `MONGODB_URI`: Your MongoDB Atlas connection URI (`mongodb+srv://...`).
+   - `JWT_SECRET`: Any secure random secret (e.g. `supersecretcampuscarekey2026_jwt_token!`).
+   - `NODE_ENV`: `production`
+6. Click **Deploy**!
+
+### Option B: Deploy Frontend on Vercel (with external Backend on Render/Railway)
+1. Import repository on Vercel.
+2. Select **Root Directory**: `frontend`.
+3. Framework preset will automatically be set to **Vite**.
+4. Under **Environment Variables**, add:
+   - `VITE_API_BASE_URL`: `https://your-backend-service.onrender.com/api`
+5. Click **Deploy**! (The bundled `frontend/vercel.json` ensures full SPA client-side routing support).
 
 ---
 
