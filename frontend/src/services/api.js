@@ -12,6 +12,9 @@ const handleResponse = async (response) => {
   const data = await response.json().catch(() => ({}));
   if (!response.ok) {
     const errorMsg = data.message || `Request failed with status ${response.status}`;
+    if (response.status === 401 && typeof window !== 'undefined' && localStorage.getItem('campuscare_token')) {
+      window.dispatchEvent(new CustomEvent('campuscare:unauthorized'));
+    }
     throw new Error(errorMsg);
   }
   return data;

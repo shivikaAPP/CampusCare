@@ -39,6 +39,16 @@ export const AuthProvider = ({ children }) => {
     };
 
     checkAuth();
+
+    const handleUnauthorized = () => {
+      logout();
+      showToast('Session expired. Please sign in again.', 'info');
+    };
+
+    window.addEventListener('campuscare:unauthorized', handleUnauthorized);
+    return () => {
+      window.removeEventListener('campuscare:unauthorized', handleUnauthorized);
+    };
   }, []);
 
   const login = async (email, password) => {

@@ -34,11 +34,12 @@ export const MyComplaints = ({ onNavigateSubmit }) => {
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'table'
   const [selectedComplaint, setSelectedComplaint] = useState(null);
 
-  const fetchComplaints = async () => {
+  const fetchComplaints = async (options = {}) => {
     try {
       setLoading(true);
+      const searchQuery = options.searchOverride !== undefined ? options.searchOverride : search;
       const res = await api.getMyComplaints({
-        search,
+        search: searchQuery,
         category: selectedCategory,
         status: selectedStatus,
       });
@@ -173,7 +174,12 @@ export const MyComplaints = ({ onNavigateSubmit }) => {
               <input
                 type="text"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  if (e.target.value === '') {
+                    fetchComplaints({ searchOverride: '' });
+                  }
+                }}
                 placeholder="Search by ticket ID (e.g. CC-2026), title, or location..."
                 className="w-full pl-9 pr-24 py-2 rounded-xl bg-slate-900 border border-slate-700/80 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-blue-500"
               />

@@ -28,6 +28,16 @@ export const ComplaintModal = ({ complaint, onClose, onUpdateSuccess }) => {
   const [actionNote, setActionNote] = useState('');
   const [submitting, setSubmitting] = useState(false);
 
+  React.useEffect(() => {
+    if (complaint) {
+      setStatus(complaint.status || 'Pending');
+      setDepartment(complaint.assignedDepartment || 'Unassigned');
+      setPriority(complaint.priority || 'Medium');
+      setAdminNotes(complaint.adminNotes || '');
+      setActionNote('');
+    }
+  }, [complaint?._id]);
+
   if (!complaint) return null;
 
   const handleAdminUpdate = async (e) => {

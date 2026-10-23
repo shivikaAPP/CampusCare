@@ -47,7 +47,7 @@ export function MainLayout() {
 
   const renderActivePage = () => {
     if (isAdmin) {
-      return <AdminDashboard />;
+      return <AdminDashboard activeTab={activeTab} setActiveTab={setActiveTab} />;
     }
 
     switch (activeTab) {

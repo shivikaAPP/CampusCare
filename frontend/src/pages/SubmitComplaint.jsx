@@ -272,7 +272,11 @@ export const SubmitComplaint = ({ onSuccessRedirect }) => {
               <img src={image} alt="Preview" className="max-h-72 object-contain" />
               <button
                 type="button"
-                onClick={() => setImage('')}
+                onClick={() => {
+                  setImage('');
+                  const fileInput = document.getElementById('file-upload');
+                  if (fileInput) fileInput.value = '';
+                }}
                 className="absolute top-3 right-3 p-2 rounded-xl bg-rose-600/80 hover:bg-rose-600 text-white shadow-lg backdrop-blur-sm transition-all"
               >
                 <X className="w-4 h-4" />

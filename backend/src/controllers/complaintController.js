@@ -1,5 +1,11 @@
 import Complaint from '../models/Complaint.js';
+import mongoose from 'mongoose';
 import { generateComplaintId } from '../utils/generateId.js';
+
+// Safe regex helper to prevent regex injection or parse crashes
+const escapeRegex = (text) => {
+  return text.replace(/[-[\]{}()*+?.,\\^$|#\s]/g, '\\$&');
+};
 
 // @desc    Create a new complaint
 // @route   POST /api/complaints
@@ -68,11 +74,12 @@ export const getMyComplaints = async (req, res, next) => {
       query.status = status;
     }
 
-    if (search) {
+    if (search && search.trim()) {
+      const sanitized = escapeRegex(search.trim());
       query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { complaintId: { $regex: search, $options: 'i' } },
-        { location: { $regex: search, $options: 'i' } },
+        { title: { $regex: sanitized, $options: 'i' } },
+        { complaintId: { $regex: sanitized, $options: 'i' } },
+        { location: { $regex: sanitized, $options: 'i' } },
       ];
     }
 
@@ -113,12 +120,13 @@ export const getAllComplaints = async (req, res, next) => {
       query.priority = priority;
     }
 
-    if (search) {
+    if (search && search.trim()) {
+      const sanitized = escapeRegex(search.trim());
       query.$or = [
-        { title: { $regex: search, $options: 'i' } },
-        { complaintId: { $regex: search, $options: 'i' } },
-        { location: { $regex: search, $options: 'i' } },
-        { userName: { $regex: search, $options: 'i' } },
+        { title: { $regex: sanitized, $options: 'i' } },
+        { complaintId: { $regex: sanitized, $options: 'i' } },
+        { location: { $regex: sanitized, $options: 'i' } },
+        { userName: { $regex: sanitized, $options: 'i' } },
       ];
     }
 
@@ -186,41 +194,49 @@ export const updateComplaintStatus = async (req, res, next) => {
 
     const statusChanged = status && status !== complaint.status;
     const departmentChanged = assignedDepartment && assignedDepartment !== complaint.assignedDepartment;
+    const priorityChanged = priority && priority !== complaint.priority;
+    const adminNotesChanged = adminNotes !== undefined && adminNotes !== complaint.adminNotes;
+    const hasActionNote = Boolean(actionNote && actionNote.trim());
 
     if (status) complaint.status = status;
     if (assignedDepartment) complaint.assignedDepartment = assignedDepartment;
     if (priority) complaint.priority = priority;
     if (adminNotes !== undefined) complaint.adminNotes = adminNotes;
 
-    // Build timeline message
-    let action = 'Status Updated';
-    let note = actionNote || '';
+    // Only record a timeline entry if something actually changed or an action note was provided
+    if (statusChanged || departmentChanged || priorityChanged || adminNotesChanged || hasActionNote) {
+      let action = 'Status Updated';
+      let note = actionNote ? actionNote.trim() : '';
 
-    if (statusChanged && departmentChanged) {
-      action = `Assigned to ${assignedDepartment} & Status set to ${status}`;
-      if (!note) note = `Transferred to ${assignedDepartment} for urgent resolution.`;
-    } else if (departmentChanged) {
-      action = `Department Assigned: ${assignedDepartment}`;
-      if (!note) note = `Assigned to ${assignedDepartment} team for technical dispatch.`;
-    } else if (statusChanged) {
-      action = `Status changed to ${status}`;
-      if (!note) {
-        if (status === 'In Progress') note = 'Field crew has initiated troubleshooting.';
-        else if (status === 'Resolved') note = 'Issue resolved and inspected on site.';
-        else if (status === 'Rejected') note = 'Ticket reviewed and marked invalid or duplicate.';
+      if (statusChanged && departmentChanged) {
+        action = `Assigned to ${assignedDepartment} & Status set to ${status}`;
+        if (!note) note = `Transferred to ${assignedDepartment} for urgent resolution.`;
+      } else if (departmentChanged) {
+        action = `Department Assigned: ${assignedDepartment}`;
+        if (!note) note = `Assigned to ${assignedDepartment} team for technical dispatch.`;
+      } else if (statusChanged) {
+        action = `Status changed to ${status}`;
+        if (!note) {
+          if (status === 'In Progress') note = 'Field crew has initiated troubleshooting.';
+          else if (status === 'Resolved') note = 'Issue resolved and inspected on site.';
+          else if (status === 'Rejected') note = 'Ticket reviewed and marked invalid or duplicate.';
+        }
+      } else if (priorityChanged) {
+        action = `Priority changed to ${priority}`;
+        if (!note) note = `Priority level adjusted to ${priority}.`;
+      } else {
+        action = 'Admin Note Added';
+        if (!note) note = adminNotes || 'Administrator updated ticket metadata.';
       }
-    } else {
-      action = 'Admin Note Added';
-      if (!note) note = adminNotes || 'Administrator updated ticket metadata.';
-    }
 
-    complaint.timeline.push({
-      status: complaint.status,
-      action,
-      note,
-      updatedBy: req.user.name,
-      timestamp: new Date(),
-    });
+      complaint.timeline.push({
+        status: complaint.status,
+        action,
+        note,
+        updatedBy: req.user.name,
+        timestamp: new Date(),
+      });
+    }
 
     const updatedComplaint = await complaint.save();
 
@@ -240,7 +256,9 @@ export const updateComplaintStatus = async (req, res, next) => {
 export const getComplaintStats = async (req, res, next) => {
   try {
     const isAdmin = req.user.role === 'admin';
-    const matchFilter = isAdmin ? {} : { userId: req.user._id };
+    const matchFilter = isAdmin
+      ? {}
+      : { userId: new mongoose.Types.ObjectId(req.user._id) };
 
     const total = await Complaint.countDocuments(matchFilter);
     const pending = await Complaint.countDocuments({ ...matchFilter, status: 'Pending' });

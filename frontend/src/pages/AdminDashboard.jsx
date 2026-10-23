@@ -41,7 +41,7 @@ const DEPARTMENTS = [
 const CATEGORIES = ['All', 'Electricity', 'Wi-Fi', 'Cleanliness', 'Water', 'Furniture', 'Other'];
 const STATUSES = ['All', 'Pending', 'In Progress', 'Resolved', 'Rejected'];
 
-export const AdminDashboard = () => {
+export const AdminDashboard = ({ activeTab, setActiveTab }) => {
   const { showToast } = useAuth();
 
   const [stats, setStats] = useState(null);
@@ -57,13 +57,14 @@ export const AdminDashboard = () => {
   // Selected complaint for deep inspection / admin workflow modal
   const [selectedComplaint, setSelectedComplaint] = useState(null);
 
-  const fetchAdminData = async () => {
+  const fetchAdminData = async (options = {}) => {
     try {
       setLoading(true);
+      const searchQuery = options.searchOverride !== undefined ? options.searchOverride : search;
       const [statsRes, complaintsRes] = await Promise.all([
         api.getComplaintStats(),
         api.getAllComplaints({
-          search,
+          search: searchQuery,
           status: selectedStatus,
           category: selectedCategory,
           department: selectedDepartment,
@@ -82,6 +83,19 @@ export const AdminDashboard = () => {
   useEffect(() => {
     fetchAdminData();
   }, [selectedStatus, selectedCategory, selectedDepartment]);
+
+  // Smoothly scroll to target section when activeTab changes
+  useEffect(() => {
+    if (activeTab === 'all-complaints') {
+      const el = document.getElementById('complaints-directory');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (activeTab === 'analytics') {
+      const el = document.getElementById('campus-analytics');
+      if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else if (activeTab === 'admin-dashboard') {
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [activeTab]);
 
   const handleSearch = (e) => {
     e.preventDefault();
@@ -216,7 +230,7 @@ export const AdminDashboard = () => {
       </div>
 
       {/* Visual Analytics Hub (Category Distribution & Department Allocation) */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+      <div id="campus-analytics" className="grid grid-cols-1 lg:grid-cols-12 gap-6 scroll-mt-24">
         {/* Category Breakdown Chart Card */}
         <div className="lg:col-span-6 p-6 rounded-2xl glass-panel border border-white/10 space-y-4">
           <div className="flex items-center justify-between">
@@ -297,7 +311,7 @@ export const AdminDashboard = () => {
       </div>
 
       {/* Complaint Triage & Dispatch Table */}
-      <div className="space-y-4">
+      <div id="complaints-directory" className="space-y-4 scroll-mt-24">
         {/* Table Filters Bar */}
         <div className="p-4 rounded-2xl glass-panel border border-white/10 space-y-4">
           <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
@@ -307,7 +321,12 @@ export const AdminDashboard = () => {
               <input
                 type="text"
                 value={search}
-                onChange={(e) => setSearch(e.target.value)}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  if (e.target.value === '') {
+                    fetchAdminData({ searchOverride: '' });
+                  }
+                }}
                 placeholder="Search ticket ID, student name, location, or issue keywords..."
                 className="w-full pl-9 pr-24 py-2.5 rounded-xl bg-slate-900 border border-slate-700/80 text-white text-xs placeholder-slate-500 focus:outline-none focus:border-blue-500"
               />
